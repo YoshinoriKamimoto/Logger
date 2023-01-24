@@ -23,15 +23,15 @@ internal class Logger
     /// </summary>
     public Logger()
     {
-        // 設定ファイルからログ出力先フォルダパスを取得
         try
         {
+            // 設定ファイルからログ出力先フォルダパスを取得
             logFolderPath = Utility.GetLogFolderPath();
             Debug.WriteLine($"ログ出力先フォルダの取得完了\n{logFolderPath}");
         }
-        catch
+        catch (Exception ex)
         {
-            throw;
+            Error("コンストラクタ", ex);
         }
     }
 
