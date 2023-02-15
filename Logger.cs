@@ -13,40 +13,58 @@ internal class Logger
     // プロパティ
     public string LogFolderPath
     {
-        get { return logFolderPath; }
+        get { return this.logFolderPath; }
     }
 
 
-
     /// <summary>
-    /// コンストラクタ
+    /// 設定ファイルからログフォルダパスを取得するメソッド
     /// </summary>
-    public Logger()
+    public void GetLogFolderPath()
     {
         try
         {
-            // 設定ファイルからログ出力先フォルダパスを取得
-            logFolderPath = Utility.GetLogFolderPath();
-            Debug.WriteLine($"ログ出力先フォルダの取得完了\n{logFolderPath}");
+            // XMLファイルを読み込む
+            XElement xml = XElement.Load(Program.configPath);
+
+
+            // 取得したい要素の存在チェック
+            if (Utility.IsElement("Log") == false)
+            {
+                Utility.MakeError($"設定ファイルに<Log>タグが見つかりませんでした。\nファイルを確認してください。\n{Program.configPath}");
+            }
+
+            if (Utility.IsElement("LogPath") == false)
+            {
+                Utility.MakeError($"設定ファイルに<LogPath>タグが見つかりませんでした。\nファイルを確認してください。\n{Program.configPath}");
+            }
+
+
+            // 要素の値を取得する
+            XElement log = xml.Element("Log");
+            logFolderPath = log.Element("LogPath").Value;
         }
         catch (Exception ex)
         {
-            Error("コンストラクタ", ex);
+            Error("GetLogFolderPath", ex);
         }
     }
 
 
+
     /// <summary>
-    /// ログファイル書き込みメソッド
+    /// ログ書き込みメソッド
     /// </summary>
-    /// <param name="subject">ログメッセージ見出し：INFO,ERRORなど</param>
-    /// <param name="msg">ログメッセージ本文</param>
-    public void Write(string subject, string msg)
+    /// <param name="logLevel">ログレベル</param>
+    /// <param name="loginId">ログインID</param>
+    /// <param name="message">メッセージ</param>
+    public void Write(string logLevel, string loginId, string message)
     {
         // 書き込み先ログファイル情報を取得
         DateTime date = DateTime.Now;
         string dateStr = date.ToString("yyyyMMdd");
         string logFilePath = $"{logFolderPath}{dateStr}.log";
+
         // ログフォルダ・ログファイルがなければ作成
         Create(logFilePath);
 
@@ -56,7 +74,7 @@ internal class Logger
             Encoding enc = Encoding.GetEncoding("UTF-8");
             using (StreamWriter sw = new StreamWriter(logFilePath, true, enc))
             {
-                sw.WriteLine($"{DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss")},[{subject}]:{msg}");
+                sw.WriteLine($"{logLevel}  {DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss.fff")} [{loginId}] {message}");
             }
         }
         catch (Exception ex)
@@ -64,6 +82,41 @@ internal class Logger
             Error("Write", ex);
         }
     }
+
+
+    /// <summary>
+    /// スタックトレースログ書き込みメソッド
+    /// Writeのオーバーロードメソッド
+    /// </summary>
+    /// <param name="logLevel">ログレベル</param>
+    /// <param name="loginId">ログインID</param>
+    /// <param name="message">メッセージ</param>
+    /// <param name="ex">例外オブジェクト</param>
+    public void Write(string logLevel, string loginId, string message, Exception ex)
+    {
+        // 書き込み先ログファイル情報を取得
+        DateTime date = DateTime.Now;
+        string dateStr = date.ToString("yyyyMMdd");
+        string logFilePath = $"{logFolderPath}{dateStr}.log";
+
+        // ログフォルダ・ログファイルがなければ作成
+        Create(logFilePath);
+
+        // ログファイルに書き込む
+        try
+        {
+            Encoding enc = Encoding.GetEncoding("UTF-8");
+            using (StreamWriter sw = new StreamWriter(logFilePath, true, enc))
+            {
+                sw.WriteLine($"{logLevel}  {DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss.fff")} [{loginId}] {message}\n{ex}");
+            }
+        }
+        catch (Exception ex2)
+        {
+            Error("Write", ex2);
+        }
+    }
+
 
 
     /// <summary>
@@ -95,7 +148,6 @@ internal class Logger
                 {
                     Debug.WriteLine($"ログファイル作成完了\n{logFilePath}");
                 }
-
             }
         }
         catch (Exception ex)
@@ -108,28 +160,84 @@ internal class Logger
 
 
     /// <summary>
-    /// 過去のログファイルを削除するメソッド
+    /// 古いログファイルを削除するメソッド
     /// </summary>
     public void Delete()
     {
         // 削除対象のファイルをすべて削除する
         try
         {
-            // 削除対象ファイルの情報を取得
-            DateTime date = DateTime.Now;
-            DirectoryInfo di = new DirectoryInfo(logFolderPath);
-            for (int i = 12; i < 24; i++)
-            {
-                string deleteDate = date.AddMonths(-i).ToString("yyyyMM");
+            // ログフォルダ配下の全ファイルを取得
+            string[] files = Directory.GetFiles(logFolderPath);
 
-                // 12~24ヶ月前のログファイルをすべて削除
-                foreach (FileInfo fi in di.EnumerateFiles($"{deleteDate}*.log"))
+            for (int i = 0; i < files.Length; i++)
+            {
+                // ファイル名を取得
+                string fileFullName = files[i].Substring(files[i].LastIndexOf(@"\") + 1);
+
+                // 拡張子なしのファイルであればスキップ
+                if (fileFullName.IndexOf(".") == -1)
                 {
-                    string fileName = fi.Name;
-                    File.Delete(logFolderPath + fileName);
+                    continue;
+                }
+
+                // 拡張子を除いたファイル名を取得
+                string fileName = fileFullName.Substring(0, fileFullName.LastIndexOf("."));
+                
+                // 拡張子を取得
+                string fileExtension = files[i].Substring(files[i].LastIndexOf(@".") + 1);
+
+
+                // ファイルが通常のログファイルでなければスキップ
+                // 拡張子をチェック
+                if (fileExtension != "log")
+                {
+                    continue;
+                }
+
+                // ファイル名の文字タイプをチェック
+                int n;
+                if (int.TryParse(fileName, out n) == false)
+                {
+                    continue;
+                }
+
+                // ファイル名の文字数をチェック
+                if (fileName.Length != 8)
+                {
+                    continue;
+                }
+
+                // ファイル名の日時が不正値であればスキップ
+                int year = int.Parse(fileName.Substring(0, 4));
+                int month = int.Parse(fileName.Substring(4, 2));
+                int day = int.Parse(fileName.Substring(6, 2));
+                if (year < 0)
+                {
+                    continue;
+                }
+
+                if (month < 1 || month > 12)
+                {
+                    continue;
+                }
+
+                if (day < 1 || day > 31)
+                {
+                    continue;
+                }
+
+
+                // 現在の日付と比較して、365日以上前であればファイル削除
+                DateTime fileNameTime = new DateTime(year, month, day);
+                DateTime nowTime = DateTime.Now;
+                TimeSpan diff = nowTime - fileNameTime;
+                TimeSpan span = new TimeSpan(365, 0, 0, 0, 0);
+                if (diff > span)
+                {
+                    File.Delete(files[i]);
                 }
             }
-
         }
         catch (Exception ex)
         {
@@ -138,15 +246,16 @@ internal class Logger
     }
 
 
+
     /// <summary>
-    /// ログ作成・書き込み・削除などでエラーが発生した場合に呼び出すメソッド
+    /// ログクラスメソッドでエラーが発生した場合に呼び出すメソッド
     /// </summary>
     /// <param name="errorPoint">エラーが発生した場所(メソッド名など)</param>
     /// <param name="ex">エラー詳細</parama>
     private void Error(string errorPoint, Exception ex)
     {
-        Debug.WriteLine($"Loggerクラスの\"{errorPoint}\"箇所でエラーが発生しました。\n{ex}");
-        MessageBox.Show($"ログ機能の\"{errorPoint}\"箇所でエラーが発生しました。\nソフトは利用できますが、ログ出力に影響がある可能性があるため、\nシステム管理者に確認してください。\n\n{ex}",
+        Debug.WriteLine($"Loggerクラス\"{errorPoint}\"箇所でエラー発生\n{ex}");
+        MessageBox.Show($"ログ機能の\"{errorPoint}\"箇所でエラーが発生しました。\nソフトは利用できますが、ログ出力に影響がある可能性があります。\nシステム管理者に確認してください。\n\n{ex}",
                         "エラー",
                         MessageBoxButtons.OK,
                         MessageBoxIcon.Error);
