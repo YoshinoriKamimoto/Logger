@@ -84,40 +84,6 @@ internal class Logger
     }
 
 
-    /// <summary>
-    /// スタックトレースログ書き込みメソッド
-    /// Writeのオーバーロードメソッド
-    /// </summary>
-    /// <param name="logLevel">ログレベル</param>
-    /// <param name="loginId">ログインID</param>
-    /// <param name="message">メッセージ</param>
-    /// <param name="ex">例外オブジェクト</param>
-    public void Write(string logLevel, string loginId, string message, Exception ex)
-    {
-        // 書き込み先ログファイル情報を取得
-        DateTime date = DateTime.Now;
-        string dateStr = date.ToString("yyyyMMdd");
-        string logFilePath = $"{logFolderPath}{dateStr}.log";
-
-        // ログフォルダ・ログファイルがなければ作成
-        Create(logFilePath);
-
-        // ログファイルに書き込む
-        try
-        {
-            Encoding enc = Encoding.GetEncoding("UTF-8");
-            using (StreamWriter sw = new StreamWriter(logFilePath, true, enc))
-            {
-                sw.WriteLine($"{logLevel}  {DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss.fff")} [{loginId}] {message}\n{ex}");
-            }
-        }
-        catch (Exception ex2)
-        {
-            Error("Write", ex2);
-        }
-    }
-
-
 
     /// <summary>
     /// ログフォルダ・ログファイル作成メソッド
