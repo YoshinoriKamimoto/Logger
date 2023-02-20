@@ -39,10 +39,6 @@ namespace あってるくんCD
                 XElement log = xml.Element("Log");
                 logFolderPath = log.Element("LogPath").Value;
             }
-            catch (NullReferenceException ex)
-            {
-                Error("GetLogFolderPath", ex);
-            }
             catch (Exception ex)
             {
                 Error("GetLogFolderPath", ex);
@@ -214,12 +210,12 @@ namespace あってるくんCD
         /// <summary>
         /// ログクラスメソッドでエラーが発生した場合に呼び出すメソッド
         /// </summary>
-        /// <param name="errorPoint">エラーが発生した場所(メソッド名など)</param>
+        /// <param name="errorPoint">エラーが発生した場所(メソッド名)</param>
         /// <param name="ex">エラー詳細</parama>
         private void Error(string errorPoint, Exception ex)
         {
-            Debug.WriteLine($"Loggerクラス\"{errorPoint}\"箇所でエラー発生\n{ex}");
-            MessageBox.Show($"ログ機能の\"{errorPoint}\"箇所でエラーが発生しました。\nソフトは利用できますが、ログ出力に影響がある可能性があります。\nシステム管理者に確認してください。\n\n{ex}",
+            Debug.WriteLine($"Loggerクラス{errorPoint}メソッドでエラー発生\n{ex}");
+            MessageBox.Show($"ログ機能の{errorPoint}メソッドでエラーが発生しました。\nソフトは利用できますが、ログ出力に影響がある可能性があります。\nシステム管理者に確認してください。\n\n{ex}",
                             "エラー",
                             MessageBoxButtons.OK,
                             MessageBoxIcon.Error);
