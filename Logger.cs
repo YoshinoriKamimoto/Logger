@@ -203,8 +203,8 @@ internal class Logger
     /// <param name="ex">エラー詳細</parama>
     private void Error(string errorPoint, Exception ex)
     {
-        Debug.WriteLine($"Loggerクラス\"{errorPoint}\"箇所でエラー発生\n{ex}");
-        MessageBox.Show($"ログ機能の\"{errorPoint}\"箇所でエラーが発生しました。\nソフトは利用できますが、ログ出力に影響がある可能性があります。\nシステム管理者に確認してください。\n\n{ex}",
+        Debug.WriteLine($"Loggerクラス{errorPoint}メソッドでエラー発生\n{ex}");
+        MessageBox.Show($"ログ機能の{errorPoint}メソッドでエラーが発生しました。\nソフトは利用できますが、ログ出力に影響がある可能性があります。\nシステム管理者に確認してください。\n\n{ex}",
                         "エラー",
                         MessageBoxButtons.OK,
                         MessageBoxIcon.Error);
